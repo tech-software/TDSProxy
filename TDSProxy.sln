@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TDSProxy", "TDSProxy\TDSProxy.csproj", "{0AE9E17C-C69B-44E9-A923-6B9B3D62BD40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TDSProtocol", "TDSProtocol\TDSProtocol.csproj", "{99FCFF04-2F8E-4AC9-8136-C2574D1E0F2F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TDSProtocolTests", "TDSProtocolTests\TDSProtocolTests.csproj", "{2ADF0698-4E98-45FA-88EC-413F75BB8FF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleAuthenticator", "SampleAuthenticator\SampleAuthenticator.csproj", "{47F41C77-1B67-4CB9-B217-27F1A882A857}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TDSProxy.Authentication", "TDSProxy.Authentication\TDSProxy.Authentication.csproj", "{87A5B526-EC83-4237-9A08-7AA977DA8EF6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConnection", "TestConnection\TestConnection.csproj", "{2B478DDF-E3E5-4C83-B89B-1F1571A72B24}"
+EndProject
+Global
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0AE9E17C-C69B-44E9-A923-6B9B3D62BD40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0AE9E17C-C69B-44E9-A923-6B9B3D62BD40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0AE9E17C-C69B-44E9-A923-6B9B3D62BD40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0AE9E17C-C69B-44E9-A923-6B9B3D62BD40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99FCFF04-2F8E-4AC9-8136-C2574D1E0F2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99FCFF04-2F8E-4AC9-8136-C2574D1E0F2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99FCFF04-2F8E-4AC9-8136-C2574D1E0F2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99FCFF04-2F8E-4AC9-8136-C2574D1E0F2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ADF0698-4E98-45FA-88EC-413F75BB8FF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ADF0698-4E98-45FA-88EC-413F75BB8FF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ADF0698-4E98-45FA-88EC-413F75BB8FF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ADF0698-4E98-45FA-88EC-413F75BB8FF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47F41C77-1B67-4CB9-B217-27F1A882A857}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47F41C77-1B67-4CB9-B217-27F1A882A857}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47F41C77-1B67-4CB9-B217-27F1A882A857}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47F41C77-1B67-4CB9-B217-27F1A882A857}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87A5B526-EC83-4237-9A08-7AA977DA8EF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87A5B526-EC83-4237-9A08-7AA977DA8EF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87A5B526-EC83-4237-9A08-7AA977DA8EF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87A5B526-EC83-4237-9A08-7AA977DA8EF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B478DDF-E3E5-4C83-B89B-1F1571A72B24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B478DDF-E3E5-4C83-B89B-1F1571A72B24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B478DDF-E3E5-4C83-B89B-1F1571A72B24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B478DDF-E3E5-4C83-B89B-1F1571A72B24}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

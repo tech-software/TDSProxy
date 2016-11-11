@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="Configuration"
+	targetNamespace="http://schemas.techsoftinc.com/TDSProxy/1.0"
+	attributeFormDefault="unqualified"
+	elementFormDefault="qualified"
+	xmlns:tdsp="http://schemas.techsoftinc.com/TDSProxy/1.0"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+	<xs:simpleType name="ipv4">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ipv6">
+		<xs:restriction base="xs:string">
+			<!-- fully fleshed-out IPv6 -->
+			<xs:pattern value="([0-9a-fA-F]{1,4}:){7}([0-9a-fA-F]{1,4})"/>
+			<!-- compressed simple IPv6 with trailing 0s -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,6}([0-9a-fA-F]{1,4}))?::"/>
+			<!-- compressed simple IPv6 with 1 final non-0 group -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,5}([0-9a-fA-F]{1,4}))?:(:[0-9a-fA-F]{1,4})"/>
+			<!-- compressed simple IPv6 with 2 final non-0 groups -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,4}([0-9a-fA-F]{1,4}))?:(:[0-9a-fA-F]{1,4}){2}"/>
+			<!-- compressed simple IPv6 with 3 final non-0 groups -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,3}([0-9a-fA-F]{1,4}))?:(:[0-9a-fA-F]{1,4}){3}"/>
+			<!-- compressed simple IPv6 with 4 final non-0 groups -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,2}([0-9a-fA-F]{1,4}))?:(:[0-9a-fA-F]{1,4}){4}"/>
+			<!-- compressed simple IPv6 with 5 final non-0 groups -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,1}([0-9a-fA-F]{1,4}))?:(:[0-9a-fA-F]{1,4}){5}"/>
+			<!-- compressed simple IPv6 with 6 final non-0 groups -->
+			<xs:pattern value="[0-9a-fA-F]{0,4}:(:[0-9a-fA-F]{1,4}){6}"/>
+			<!-- compressed simple IPv6 with 7 final non-0 groups -->
+			<xs:pattern value=":(:[0-9a-fA-F]{1,4}){7}"/>
+			<!-- fully fleshed out IPv6 + IPv4 -->
+			<xs:pattern value="([0-9a-fA-F]{1,4}:){6}(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+			<!-- IPv6 + IPv4 compressed immediately before IPv4 part -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,4}[0-9a-fA-F]{1,4})?::(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+			<!-- IPv6 + IPv4 compressed then 1 group before IPv4 part -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,3}[0-9a-fA-F]{1,4})?::[0-9a-fA-F]{1,4}:(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+			<!-- IPv6 + IPv4 compressed then 2 groups before IPv4 part -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,2}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){2}(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+			<!-- IPv6 + IPv4 compressed then 3 groups before IPv4 part -->
+			<xs:pattern value="(([0-9a-fA-F]{1,4}:){0,1}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){3}(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+			<!-- IPv6 + IPv4 compressed then 4 groups before IPv4 part -->
+			<xs:pattern value="[0-9a-fA-F]{0,4}::([0-9a-fA-F]{1,4}:){4}(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+			<!-- IPv6 + IPv4 compressed then 5 groups before IPv4 part -->
+			<xs:pattern value="::([0-9a-fA-F]{1,4}:){5}(([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])\.){3}([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5])))"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="address">
+		<xs:union memberTypes="tdsp:ipv4 tdsp:ipv6"/>
+	</xs:simpleType>
+	<xs:simpleType name="hostname">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="255"/>
+			<xs:pattern value="(?!-)[a-zA-Z0-9-]{1,63}(\.[a-zA-Z0-9-]{1,63})*\.?"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="host">
+		<xs:union memberTypes="tdsp:address tdsp:hostname"/>
+	</xs:simpleType>
+	<xs:simpleType name="port">
+		<xs:restriction base="xs:integer">
+			<xs:minInclusive value="1"/>
+			<xs:maxInclusive value="65535"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="tdsProxy">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="listeners" minOccurs="0" maxOccurs="1">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="clear" minOccurs="0" maxOccurs="1">
+								<xs:complexType>
+									<!-- empty tag -->
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="add" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:attribute name="name" type="xs:string" use="required"/>
+									<xs:attribute name="bindToAddress" type="tdsp:address" use="optional"/>
+									<xs:attribute name="listenOnPort" type="tdsp:port" use="required"/>
+									<xs:attribute name="forwardToHost" type="tdsp:host" use="required"/>
+									<xs:attribute name="forwardToPort" type="tdsp:port" use="required"/>
+									<xs:attribute name="authenticatorDll" type="xs:string" use="required"/>
+									<xs:attribute name="authenticatorClass" type="xs:string" use="required"/>
+									<xs:attribute name="sslCertStoreLocation" use="required">
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="CurrentUser"/>
+												<xs:enumeration value="LocalMachine"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:attribute>
+									<xs:attribute name="sslCertStoreName" use="required">
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:enumeration value="AddressBook"/>
+												<xs:enumeration value="AuthRoot"/>
+												<xs:enumeration value="CertificateAuthority"/>
+												<xs:enumeration value="My"/>
+												<xs:enumeration value="Root"/>
+												<xs:enumeration value="TrustedPeople"/>
+												<xs:enumeration value="TrustedPublisher"/>
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:attribute>
+									<xs:attribute name="sslCertSubjectThumbprint" type="xs:string" use="required"/>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="remove" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:attribute name="name" type="xs:string" use="required"/>
+								</xs:complexType>
+							</xs:element>
+						</xs:choice>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
