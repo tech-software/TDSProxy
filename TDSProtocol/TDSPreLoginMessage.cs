@@ -422,6 +422,8 @@ namespace TDSProtocol
 						_mars = (MarsEnum)br.ReadByte();
 						break;
 					case OptionToken.TraceId:
+						if (o.Length == 0)
+							break;
 						if (o.Length < 36)
 							throw new TDSInvalidMessageException(
 								string.Format("TraceId option length ({0}) was less than 36", o.Length),
