@@ -306,7 +306,8 @@ namespace TDSProtocol
 				AddToken(options, OptionToken.Encryption, ref offset, 1);
 			if (null != InstValidity)
 				AddToken(options, OptionToken.InstOpt, ref offset, (ushort)InstValidity.Length);
-			AddToken(options, OptionToken.ThreadId, ref offset, null == ThreadId ? (ushort)0 : (ushort)4);
+			if (null != ThreadId)
+				AddToken(options, OptionToken.ThreadId, ref offset, 4);
 			if (null != Mars)
 				AddToken(options, OptionToken.Mars, ref offset, 1);
 			if (null != TraceId)
@@ -315,7 +316,9 @@ namespace TDSProtocol
 				AddToken(options, OptionToken.FedAuthRequired, ref offset, 1);
 			if (null != Nonce)
 				AddToken(options, OptionToken.Nonce, ref offset, 1);
+			
 			AddToken(options, OptionToken.Terminator, ref offset, 0);
+			
 			// Calculate the length of the token data and bump the offsets
 			var initOffset = (ushort)((options.Count * 5) - 4); // 5 bytes per token, except the final Terminator is only 1 byte
 			foreach (var o in options)
@@ -391,7 +394,7 @@ namespace TDSProtocol
 						break;
 					case OptionToken.Encryption:
 						if (o.Length < 1)
-							throw new TDSInvalidMessageException("encrtypion option contained no data", MessageType, Payload);
+							throw new TDSInvalidMessageException("encryption option contained no data", MessageType, Payload);
 						if (o.Length > 1)
 							log.InfoFormat("Additional data in PRELOGIN encryption option, length was {0}, expected 1", o.Length);
 						_encryption = (EncryptionEnum)br.ReadByte();

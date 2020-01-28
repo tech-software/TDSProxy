@@ -477,7 +477,13 @@ namespace TDSProxy
 
 				var preLoginResponse = await ReadPreLoginResponseFromServer().ConfigureAwait(false);
 				if (null == preLoginResponse)
+				{
+					log.WarnFormat("Bad response from prelogin for {0} from {1}.\r\n{2}\r\n{3}", _outsideEP, _insideEP,
+						preLoginFromClient.DumpReceivedPayload(),
+						preLoginFromClient.DumpPayload());
 					return;
+				}
+
 				log.DebugFormat("Received PreLogin response for {0} from {1}", _outsideEP, _insideEP);
 
 				await ProcessAndForwardPreLoginResponse(preLoginResponse).ConfigureAwait(false);
@@ -490,7 +496,7 @@ namespace TDSProxy
 					await _outsideSSL.AuthenticateAsServerAsync(
 						_listener.Certificate,
 						false,
-						SslProtocols.Ssl3 | SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
+						SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
 						false).ConfigureAwait(false);
 				}
 				catch (Exception e)
@@ -517,12 +523,18 @@ namespace TDSProxy
 						return;
 					log.DebugFormat("Received Login7 message from {0} with user '{1}' and database '{2}'", _outsideEP, login7.UserName, login7.Database);
 
+					if (string.Equals(login7.UserName, "sa", StringComparison.OrdinalIgnoreCase))
+					{
+						log.InfoFormat("Quick exit on 'sa' attempt. Login denied for remote client {0}.", _outsideEP);
+						return;
+					}
+
 					var authResult = _listener.Authenticator.Authenticate(_outsideEP.Address, login7.UserName, login7.Password, login7.Database);
 					bool authOK = null != authResult && authResult.AllowConnection;
 					if (!authOK)
 					{
 						log.InfoFormat("Authentication failed for user '{0}', database '{1}' for remote client {2}", login7.UserName, login7.Database, _outsideEP);
-						SendLogin7DeniedResponse("Username or password incorrect.");
+						await SendLogin7DeniedResponse("Username or password incorrect.").ConfigureAwait(false);
 						return;
 					}
 
@@ -682,41 +694,52 @@ namespace TDSProxy
 		{
 			try
 			{
-				var packetsFromClient = await TDSPacket.ReadAsync(_outsideSSL);
+				var cts = new CancellationTokenSource(30_000);
+				var packetsFromClient = await TDSPacket.ReadAsync(_outsideSSL, cts.Token);
 				_spid = packetsFromClient.First().SPID;
 				var message = TDSMessage.FromPackets(packetsFromClient);
 				var login7 = message as TDSLogin7Message;
 				if (null == login7)
 				{
-					log.ErrorFormat("Client {0} sent a {1} message when expecting a Login7 message", _outsideEP, message.MessageType);
+					log.ErrorFormat("Client {0} sent a {1} message when expecting a Login7 message", _outsideEP,
+						message.MessageType);
 					return null;
 				}
-				_packetLength = (ushort)Math.Min(ushort.MaxValue, Math.Max(MinimumPacketLimit, login7.PacketSize));
+
+				_packetLength = (ushort) Math.Min(ushort.MaxValue, Math.Max(MinimumPacketLimit, login7.PacketSize));
 				_clientTdsVersion = login7.TdsVersion;
-				if (!string.IsNullOrEmpty(login7.AttachDBFile) || (_clientTdsVersion >= 0x72000000 && (login7.OptionFlags3 & TDSLogin7Message.OptionFlags3Enum.UserInstance) != 0))
+				if (!string.IsNullOrEmpty(login7.AttachDBFile) || (_clientTdsVersion >= 0x72000000 &&
+				                                                   (login7.OptionFlags3 & TDSLogin7Message.OptionFlags3Enum
+					                                                    .UserInstance) != 0))
 				{
 					log.InfoFormat("Client {0} requested a user instance; denying login & dropping connection", _outsideEP);
 					await SendLogin7DeniedResponse("User instances not permitted.").ConfigureAwait(false);
 					return null;
 				}
+
 				if ((login7.OptionFlags2 & TDSLogin7Message.OptionFlags2Enum.IntegratedSecurity) != 0)
 				{
 					log.InfoFormat("Client {0} requested integrated security; denying login & dropping connection", _outsideEP);
 					await SendLogin7DeniedResponse("Integrated Security not supported.").ConfigureAwait(false);
 					return null;
 				}
+
 				if (null != login7.SSPI && 0 != login7.SSPI.Length)
 				{
 					log.InfoFormat("Client {0} requested SSPI; denying login & dropping connection", _outsideEP);
 					await SendLogin7DeniedResponse("SSPI is not supported.").ConfigureAwait(false);
 					return null;
 				}
-				if (null != login7.FeatureExt && login7.FeatureExt.Any(fe => fe.FeatureId == TDSLogin7Message.FeatureId.FedAuth))
+
+				if (null != login7.FeatureExt &&
+				    login7.FeatureExt.Any(fe => fe.FeatureId == TDSLogin7Message.FeatureId.FedAuth))
 				{
-					log.InfoFormat("Client {0} requested federated authentication; denying login & dropping connection", _outsideEP);
+					log.InfoFormat("Client {0} requested federated authentication; denying login & dropping connection",
+						_outsideEP);
 					await SendLogin7DeniedResponse("Federated authentication is not supported.").ConfigureAwait(false);
 					return null;
 				}
+
 				return login7;
 			}
 			catch (EndOfStreamException)
@@ -730,6 +753,10 @@ namespace TDSProxy
 			catch (TDSInvalidMessageException ime)
 			{
 				log.Error(string.Format("Client {0} sent invalid TDS message within valid TDS packets", _outsideEP), ime);
+			}
+			catch (TaskCanceledException tce)
+			{
+				log.Error(string.Format("Timed out reading Login7 from client {0}", _outsideEP), tce);
 			}
 			catch (Exception e)
 			{

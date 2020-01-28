@@ -14,6 +14,7 @@ namespace TDSProtocol
 	{
 		public abstract TDSMessageType MessageType { get; }
 		protected internal byte[] Payload { get; set; }
+		protected internal byte[] ReceivedPayload { get; set; }
 
 		public static TDSMessage FromPackets(IEnumerable<TDSPacket> packets, TDSMessageType? overrideMessageType = null)
 		{
@@ -38,10 +39,15 @@ namespace TDSProtocol
 				payloadOffset += packet.Payload.Length;
 			}
 			message.Payload = payload;
+			message.ReceivedPayload = payload;
+
 			message.InterpretPayload();
 
 			return message;
 		}
+
+		public virtual string DumpReceivedPayload() => ReceivedPayload.FormatAsHex();
+		public virtual string DumpPayload() => Payload.FormatAsHex();
 
 		public void WriteAsPackets(Stream stream, ushort packetLength, ushort spid, TDSStatus status = TDSStatus.Normal, TDSMessageType? overrideMessageType = null)
 		{
