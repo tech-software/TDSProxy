@@ -413,7 +413,7 @@ namespace TDSProtocol
 									MessageType,
 									Payload);
 							if (o.Length > 4)
-								log.InfoFormat("Additional data in PRELOGIN encryption option, length was {0}, expected 4", o.Length);
+								log.InfoFormat("Additional data in PRELOGIN ThreadId option, length was {0}, expected 4", o.Length);
 							_threadId = br.ReadUInt32();
 						}
 						break;

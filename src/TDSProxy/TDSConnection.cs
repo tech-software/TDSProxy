@@ -458,9 +458,30 @@ namespace TDSProxy
 				Interlocked.Decrement(ref _activeConnectionCount);
 				_state = StateEnum.Closed;
 				_service.Stopping -= service_Stopping; // NOTE: VERY IMPORTANT, DO NOT REMOVE - this prevents memory leaks
-				_insideStream.Close();
-				_outsideSSL.Close();
-				_outsideAdapter.Close();
+				try
+				{
+					_insideStream.Close();
+				}
+				catch (Exception e)
+				{
+					log.ErrorFormat("Error closing inside stream for connection from {0}", _outsideEP);
+				}
+				try
+				{
+					_outsideSSL.Close();
+				}
+				catch (Exception e)
+				{
+					log.ErrorFormat("Error closing outbound SSL stream for connection from {0}", _outsideEP);
+				}
+				try
+				{
+					_outsideAdapter.Close();
+				}
+				catch (Exception e)
+				{
+					log.ErrorFormat("Error closing SSL adapter for connection from {0}", _outsideAdapter);
+				}
 			}
 		}
 
@@ -585,7 +606,9 @@ namespace TDSProxy
 				var preLogin = message as TDSPreLoginMessage;
 				if (null == preLogin)
 				{
-					log.ErrorFormat("Client {0} sent a {1} message when expecting a PreLogin message", _outsideEP, message.MessageType);
+					log.ErrorFormat("Client {0} sent a {1} message when expecting a PreLogin message",
+					                _outsideEP,
+					                message.MessageType);
 					return null;
 				}
 				if (!preLogin.Encryption.HasValue)
@@ -595,7 +618,9 @@ namespace TDSProxy
 				}
 				if (preLogin.Encryption == TDSPreLoginMessage.EncryptionEnum.NotSupported)
 				{
-					log.InfoFormat("Client {0} does not support encryption; responding that encryption is required prior to dropping connection", _outsideEP);
+					log.InfoFormat(
+						"Client {0} does not support encryption; responding that encryption is required prior to dropping connection",
+						_outsideEP);
 					preLogin.Encryption = TDSPreLoginMessage.EncryptionEnum.Required;
 					await preLogin.WriteAsPacketsAsync(_outsideStream, _packetLength, _spid).ConfigureAwait(false);
 					return null;
@@ -613,6 +638,10 @@ namespace TDSProxy
 			catch (TDSInvalidMessageException ime)
 			{
 				log.Error(string.Format("Client {0} sent invalid TDS message within valid TDS packets", _outsideEP), ime);
+			}
+			catch (ObjectDisposedException) when (_state == StateEnum.Closed)
+			{
+				// Normal, ignore it.
 			}
 			catch (Exception e)
 			{
@@ -832,11 +861,7 @@ namespace TDSProxy
 		{
 			_state = StateEnum.Connected;
 
-			var tOtoI = ForwardOutsideToInside();
-			var tItoO = ForwardInsideToOutside();
-
-			await tOtoI;
-			await tItoO;
+			await Task.WhenAll(ForwardOutsideToInside(), ForwardInsideToOutside());
 		}
 
 		private async Task ForwardOutsideToInside()
