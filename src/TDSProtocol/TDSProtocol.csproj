@@ -45,6 +45,7 @@
     <Compile Include="BinaryWriterExtensions.cs" />
     <Compile Include="BinaryReaderExtensions.cs" />
     <Compile Include="EnumerableOfByteExtensions.cs" />
+    <Compile Include="JetBrains.Annotations.cs" />
     <Compile Include="SmpFlags.cs" />
     <Compile Include="SMPInvalidPacketException.cs" />
     <Compile Include="SMPPacket.cs" />

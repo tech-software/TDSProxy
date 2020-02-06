@@ -514,11 +514,7 @@ namespace TDSProxy
 
 				try
 				{
-					await _outsideSSL.AuthenticateAsServerAsync(
-						_listener.Certificate,
-						false,
-						SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
-						false).ConfigureAwait(false);
+					await _outsideSSL.AuthenticateAsServerAsync(_listener.Certificate).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -816,17 +812,17 @@ namespace TDSProxy
 			// NOTE: Cannot use await from here down to after the call to msg.BuildMessage() because TDSToken is stored in a ThreadStatic and await may cause thread hopping
 			TDSToken.TdsVersion = presumedServerTdsVersion;
 			var msg = new TDSTabularDataMessage();
-			msg.AddToken(new TDSErrorToken(msg)
-			{
-				Number = 50000,
-				State = 1,
-				Class = 14,
-				MsgText = "Login failed. " + errorMessage
-			});
-			msg.AddToken(new TDSDoneToken(msg)
-			{
-				Status = TDSDoneToken.StatusEnum.Final | TDSDoneToken.StatusEnum.Error
-			});
+			msg.AddTokens(new TDSErrorToken(msg)
+			              {
+				              Number = 50000,
+				              State = 1,
+				              Class = 14,
+				              MsgText = "Login failed. " + errorMessage
+			              },
+			              new TDSDoneToken(msg)
+			              {
+				              Status = TDSDoneToken.StatusEnum.Final | TDSDoneToken.StatusEnum.Error
+			              });
 			msg.BuildMessage();
 
 			await msg.WriteAsPacketsAsync(_encryptionSettingForClient == TDSPreLoginMessage.EncryptionEnum.Off ? (Stream)_outsideStream : _outsideSSL, _packetLength, _spid).ConfigureAwait(false);

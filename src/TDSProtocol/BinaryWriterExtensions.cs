@@ -35,6 +35,34 @@ namespace TDSProtocol
 				writer.Write(Unicode.Instance.GetBytes(value));
 		}
 
+		public static void WriteBVarchar(this BinaryWriter writer, string value)
+		{
+			if (value?.Length > byte.MaxValue)
+				throw new ArgumentException($"B_VARCHAR strings must not be longer than {byte.MaxValue} characters", nameof(value));
+
+			if (null == value)
+				writer.Write((byte)0);
+			else
+			{
+				writer.Write((byte)value.Length);
+				writer.WriteUnicodeBytes(value);
+			}
+		}
+
+		public static void WriteUsVarchar(this BinaryWriter writer, string value)
+		{
+			if (value?.Length > ushort.MaxValue)
+				throw new ArgumentException($"US_VARCHAR strings must not be longer than {ushort.MaxValue} characters", nameof(value));
+
+			if (null == value)
+				writer.WriteBigEndian((ushort)0);
+			else
+			{
+				writer.Write((ushort)value.Length);
+				writer.WriteUnicodeBytes(value);
+			}
+		}
+
 		public static void WriteObfuscatedPassword(this BinaryWriter writer, string password)
 		{
 			if (null != password)

@@ -56,9 +56,14 @@ namespace TDSProxy
 			InitializeComponent();
 		}
 
-		protected override void OnStart(string[] args)
+		protected override void OnStart(string[] args) => Start(args);
+
+		public void Start(string[] args)
 		{
-			log.Info("\r\n-----------------\r\nService Starting.\r\n-----------------\r\n");
+			log.InfoFormat(
+				"\r\n-----------------\r\nService Starting on {0} with security protocol {1}.\r\n-----------------\r\n",
+				AppContext.TargetFrameworkName,
+				ServicePointManager.SecurityProtocol);
 
 			if (args.Any(a => string.Equals(a, "debug", StringComparison.OrdinalIgnoreCase)))
 			{
@@ -84,7 +89,7 @@ namespace TDSProxy
 
 			AllowUnencryptedConnections = args.Any(a => string.Equals(a, "allowunencrypted", StringComparison.OrdinalIgnoreCase));
 			if (AllowUnencryptedConnections)
-				log.Debug("Allowing unencrypted connections (but encryption must be supported because we will not allow unencryption login).");
+				log.Debug("Allowing unencrypted connections (but encryption must be supported because we will not allow unencrypted login).");
 
 			_stopRequested = false;
 
@@ -93,7 +98,9 @@ namespace TDSProxy
 			log.Info("TDSProxyService initialization complete.");
 		}
 
-		protected override void OnStop()
+		protected override void OnStop() => Stop();
+
+		public void Stop()
 		{
 			log.Info("Stopping TDSProxyService");
 			LogStats();
@@ -136,12 +143,7 @@ namespace TDSProxy
 
 		public event EventHandler Stopping;
 
-		protected virtual void OnStopping(EventArgs e)
-		{
-			var stopping = Stopping;
-			if (null != stopping)
-				stopping(this, e);
-		}
+		protected virtual void OnStopping(EventArgs e) => Stopping?.Invoke(this, e);
 
 		private void StartListeners()
 		{

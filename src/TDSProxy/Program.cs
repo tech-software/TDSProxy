@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TDSProxy
 {
@@ -12,16 +8,22 @@ namespace TDSProxy
 		/// <summary>
 		/// The main entry point for the application.
 		/// </summary>
-		static void Main()
+		static void Main(string[] args)
 		{
 			Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-			ServiceBase[] ServicesToRun;
-			ServicesToRun = new ServiceBase[] 
-			{ 
-				new TDSProxyService()
-			};
-			ServiceBase.Run(ServicesToRun);
+			var service = new TDSProxyService();
+			if (Environment.UserInteractive)
+			{
+				service.Start(args);
+				Console.Write("Press ESC to end...");
+				while (Console.ReadKey(false).Key != ConsoleKey.Escape) {}
+				service.Stop();
+			}
+			else
+			{
+				ServiceBase.Run(new TDSProxyService());
+			}
 		}
 	}
 }

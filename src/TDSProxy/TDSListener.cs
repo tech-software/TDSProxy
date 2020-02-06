@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 using TDSProxy.Authentication;
 
 namespace TDSProxy
@@ -173,8 +170,8 @@ namespace TDSProxy
 			if (!_stopped)
 			{
 				_stopped = true;
-				_service.RemoveListener(this);
-				_tcpListener.Stop();
+				_service?.RemoveListener(this);
+				_tcpListener?.Stop();
 				_authenticator = null;
 				if (null != _mefContainer)
 				{

@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public class TDSErrorToken : TDSToken
 	{
 		public TDSErrorToken(TDSTokenStreamMessage owningMessage) : base(owningMessage) { }
@@ -118,18 +116,18 @@ namespace TDSProtocol
 				2 + // MsgText length
 				1 + // ServerName length
 				1 + // ProcName length
-				(null == MsgText ? 0 : MsgText.Length) +
-				(null == ServerName ? 0 : ServerName.Length) +
-				(null == ProcName ? 0 : ProcName.Length) +
+				(null == MsgText ? 0 : MsgText.Length * 2) +
+				(null == ServerName ? 0 : ServerName.Length * 2) +
+				(null == ProcName ? 0 : ProcName.Length * 2) +
 				(TDSToken.TdsVersion >= 0x7200000 ? 4 : 2) // LineNumber
 				);
 			bw.Write(length);
 			bw.Write(Number);
 			bw.Write(State);
 			bw.Write(Class);
-			bw.Write((ushort)(null == MsgText ? 0 : MsgText.Length));
-			bw.Write((ushort)(null == ServerName ? 0 : ServerName.Length));
-			bw.Write((ushort)(null == ProcName ? 0 : ProcName.Length));
+			bw.WriteUsVarchar(MsgText);
+			bw.WriteBVarchar(ServerName);
+			bw.WriteBVarchar(ProcName);
 			if (TDSToken.TdsVersion >= 0x72000000)
 				bw.Write(LineNumber);
 			else
