@@ -1,6 +1,6 @@
 ﻿namespace TDSProxy
 {
-	partial class TDSProxyService
+	sealed partial class TDSProxyService
 	{
 		/// <summary> 
 		/// Required designer variable.

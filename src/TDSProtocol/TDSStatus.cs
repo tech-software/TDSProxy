@@ -1,8 +1,9 @@
 ﻿using System;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
-	[Flags]
+	[Flags, PublicAPI]
 	public enum TDSStatus : byte
 	{
 		Normal = 0,

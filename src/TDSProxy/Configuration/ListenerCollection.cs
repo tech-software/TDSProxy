@@ -1,21 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TDSProxy.Configuration
 {
 	public class ListenerCollection : ConfigurationElementCollection
 	{
+		// ReSharper disable once UnusedMember.Global
 		public ListenerElement this[int index]
 		{
-			get { return (ListenerElement)base.BaseGet(index); }
+			get => (ListenerElement)BaseGet(index);
 			set
 			{
-				if (null != base.BaseGet(index))
-					base.BaseRemoveAt(index);
+				if (null != BaseGet(index))
+					BaseRemoveAt(index);
 				base.BaseAdd(index, value);
 			}
 		}

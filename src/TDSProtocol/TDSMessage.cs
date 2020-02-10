@@ -4,26 +4,30 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public abstract class TDSMessage
 	{
 		public abstract TDSMessageType MessageType { get; }
 		protected internal byte[] Payload { get; set; }
-		protected internal byte[] ReceivedPayload { get; set; }
+		protected internal byte[] ReceivedPayload { get; private set; }
 
 		public static TDSMessage FromPackets(IEnumerable<TDSPacket> packets, TDSMessageType? overrideMessageType = null)
 		{
-			if (null == packets || !packets.Any())
+			if (null == packets)
 				return null;
 
-			Func<TDSMessage> constructor;
-			var firstPacket = packets.First();
-			if (!_concreteTypeConstructors.TryGetValue(overrideMessageType ?? firstPacket.PacketType, out constructor))
+			var packetList = packets as List<TDSPacket> ?? packets.ToList();
+			if (packetList.Count == 0)
+				return null;
+
+			var firstPacket = packetList[0];
+			if (!ConcreteTypeConstructors.TryGetValue(overrideMessageType ?? firstPacket.PacketType, out var constructor))
 			{
 				var packetData = firstPacket.PacketData;
 				throw new TDSInvalidPacketException("Unrecognized TDS message type 0x" + ((byte)firstPacket.PacketType).ToString("X2"), packetData, packetData.Length);
@@ -31,9 +35,9 @@ namespace TDSProtocol
 
 			// Instantiate the concrete message type and fill out the payload
 			TDSMessage message  = constructor();
-			byte[] payload = new byte[packets.Sum(p => p.Payload.Length)];
+			byte[] payload = new byte[packetList.Sum(p => p.Payload.Length)];
 			int payloadOffset = 0;
-			foreach (var packet in packets)
+			foreach (var packet in packetList)
 			{
 				Buffer.BlockCopy(packet.Payload, 0, payload, payloadOffset, packet.Payload.Length);
 				payloadOffset += packet.Payload.Length;
@@ -46,8 +50,8 @@ namespace TDSProtocol
 			return message;
 		}
 
-		public virtual string DumpReceivedPayload() => ReceivedPayload.FormatAsHex();
-		public virtual string DumpPayload() => Payload.FormatAsHex();
+		public virtual string DumpReceivedPayload(string prefix = null) => ReceivedPayload.FormatAsHex(prefix);
+		public virtual string DumpPayload(string prefix = null) => Payload.FormatAsHex(prefix);
 
 		public void WriteAsPackets(Stream stream, ushort packetLength, ushort spid, TDSStatus status = TDSStatus.Normal, TDSMessageType? overrideMessageType = null)
 		{
@@ -86,10 +90,11 @@ namespace TDSProtocol
 		{
 			// Get default constructor
 			var ci = t.GetConstructor(
-				BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
-				null,
-				System.Type.EmptyTypes,
-				null);
+				         BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
+				         null,
+				         Type.EmptyTypes,
+				         null) ??
+			         throw new InvalidOperationException($"Unable to find default constructor for type {t.FullName}");
 
 			// Generate IL function to invoke the default constructor
 			var dm = new DynamicMethod("_dynamic_constructor", t, Type.EmptyTypes, t);
@@ -99,12 +104,12 @@ namespace TDSProtocol
 			return (Func<TDSMessage>)dm.CreateDelegate(typeof(Func<TDSMessage>));
 		}
 
-		private readonly static Dictionary<TDSMessageType, Func<TDSMessage>> _concreteTypeConstructors =
+		private static readonly Dictionary<TDSMessageType, Func<TDSMessage>> ConcreteTypeConstructors =
 			(
 				from cls in Assembly.GetExecutingAssembly().GetTypes()
 				where !cls.IsAbstract && typeof(TDSMessage).IsAssignableFrom(cls)
 				select cls
-			).ToDictionary(t => MakeConstructor(t)().MessageType, new Func<Type, Func<TDSMessage>>(MakeConstructor));
+			).ToDictionary(t => MakeConstructor(t)().MessageType, MakeConstructor);
 
 		#endregion
 	}

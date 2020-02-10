@@ -2,24 +2,24 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public class TDSPacket
 	{
 		#region Log4Net
 		static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 		#endregion
 
-		private static readonly HashSet<TDSMessageType> _knownPacketTypes = new HashSet<TDSMessageType>(Enum.GetValues(typeof(TDSMessageType)).Cast<TDSMessageType>());
+		private static readonly HashSet<TDSMessageType> KnownPacketTypes =
+			new HashSet<TDSMessageType>(Enum.GetValues(typeof(TDSMessageType)).Cast<TDSMessageType>());
 		public static bool IsTDSPacketType(byte packetTypeByte)
 		{
-			return _knownPacketTypes.Contains((TDSMessageType)packetTypeByte);
+			return KnownPacketTypes.Contains((TDSMessageType)packetTypeByte);
 		}
 
 		public static bool DumpPackets { get; set; }
@@ -77,8 +77,7 @@ namespace TDSProtocol
 			TDSStatus status = TDSStatus.Normal,
 			TDSMessageType? overrideMessageType = null)
 		{
-			if ((status & TDSStatus.EndOfMessage) == TDSStatus.EndOfMessage)
-				status -= TDSStatus.EndOfMessage;
+			status &= ~TDSStatus.EndOfMessage;
 
 			message.EnsurePayload();
 			var payload = message.Payload;
@@ -226,7 +225,8 @@ namespace TDSProtocol
 				var packetData = new byte[packetBytesRead];
 				Buffer.BlockCopy(header, 0, packetData, 0, HeaderLength);
 				Buffer.BlockCopy(payload, 0, packetData, HeaderLength, packetBytesRead - HeaderLength);
-				throw new TDSInvalidPacketException(string.Format("Unexpected message type, expected {0} got {1}", type, (TDSMessageType)header[0]), null, 0);
+				throw new TDSInvalidPacketException(
+					$"Unexpected message type, expected {type} got {(TDSMessageType)header[0]}", null, 0);
 			}
 
 			if (DumpPackets)

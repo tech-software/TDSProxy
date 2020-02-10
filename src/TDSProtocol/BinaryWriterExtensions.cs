@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TDSProtocol
 {
@@ -11,22 +7,22 @@ namespace TDSProtocol
 	{
 		public static void WriteBigEndian(this BinaryWriter writer, short value)
 		{
-			writer.Write(new byte[] { (byte)(value >> 8), (byte)value });
+			writer.Write(new[] { (byte)(value >> 8), (byte)value });
 		}
 
 		public static void WriteBigEndian(this BinaryWriter writer, ushort value)
 		{
-			writer.Write(new byte[] { (byte)(value >> 8), (byte)value });
+			writer.Write(new[] { (byte)(value >> 8), (byte)value });
 		}
 
 		public static void WriteBigEndian(this BinaryWriter writer, int value)
 		{
-			writer.Write(new byte[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
+			writer.Write(new[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
 		}
 
 		public static void WriteBigEndian(this BinaryWriter writer, uint value)
 		{
-			writer.Write(new byte[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
+			writer.Write(new[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
 		}
 
 		public static void WriteUnicodeBytes(this BinaryWriter writer, string value)

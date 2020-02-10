@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProxy.Configuration
 {
@@ -13,17 +10,15 @@ namespace TDSProxy.Configuration
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[ConfigurationProperty("xmlns")]
+		[UsedImplicitly]
 		public string Xmlns
 		{
-			get { return (string)base["xmlns"]; }
-			set { base["xmlns"] = value; }
+			get => (string)base["xmlns"];
+			set => base["xmlns"] = value;
 		}
 
 		[ConfigurationProperty("listeners", IsDefaultCollection = true, IsRequired = true)]
 		[ConfigurationCollection(typeof(ListenerCollection))]
-		public ListenerCollection Listeners
-		{
-			get { return (ListenerCollection)base["listeners"]; }
-		}
+		public ListenerCollection Listeners => (ListenerCollection)base["listeners"];
 	}
 }

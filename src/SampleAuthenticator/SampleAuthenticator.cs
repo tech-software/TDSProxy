@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using System.ComponentModel.Composition;
 
 using TDSProxy.Authentication;
@@ -17,6 +13,7 @@ namespace SampleAuthenticator
 		{
 			return new AuthenticationResult
 			{
+				// ReSharper disable once StringLiteralTypo
 				AllowConnection = !string.Equals(username, "baduser", StringComparison.OrdinalIgnoreCase),
 				ConnectToDatabase = database,
 				ConnectAsUser = username,

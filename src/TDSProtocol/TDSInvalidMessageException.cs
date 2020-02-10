@@ -1,38 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public class TDSInvalidMessageException : Exception
 	{
-		private readonly TDSMessageType _type;
-		private readonly byte[] _payload;
+		public TDSMessageType MessageType { get; }
 
-		public TDSMessageType MessageType
+		public byte[] Payload { get; }
+
+		public TDSInvalidMessageException(string message,
+		                                  TDSMessageType type,
+		                                  byte[] payload,
+		                                  Exception innerException = null) : base(message, innerException)
 		{
-			get { return _type; }
+			MessageType = type;
+			Payload = new byte[payload.Length];
+			Buffer.BlockCopy(payload, 0, Payload, 0, payload.Length);
 		}
 
-		public byte[] Payload
-		{
-			get { return _payload; }
-		}
 
-		public TDSInvalidMessageException(string message, TDSMessageType _type, byte[] payload) : base(message)
-		{
-			_payload = new byte[payload.Length];
-			Buffer.BlockCopy(payload, 0, _payload, 0, payload.Length);
-		}
-
-		public string PayloadFormatted
-		{
-			get
-			{
-				return _payload.FormatAsHex();
-			}
-		}
+		public string PayloadFormatted => Payload.FormatAsHex();
 	}
 }

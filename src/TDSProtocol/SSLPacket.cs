@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Authentication;
-using System.Text;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public class SSLPacket
 	{
 		#region Log4Net
@@ -25,45 +26,35 @@ namespace TDSProtocol
 			{ 0x0303, SslProtocols.Tls12 }
 		};
 
-		private static readonly HashSet<SslPacketType> _knownPacketTypes = new HashSet<SslPacketType>(Enum.GetValues(typeof(SslPacketType)).Cast<SslPacketType>());
+		private static readonly HashSet<SslPacketType> KnownPacketTypes =
+			new HashSet<SslPacketType>(Enum.GetValues(typeof(SslPacketType)).Cast<SslPacketType>());
 		public static bool IsSSLPacketType(byte packetTypeByte)
 		{
-			return _knownPacketTypes.Contains((SslPacketType)packetTypeByte);
+			return KnownPacketTypes.Contains((SslPacketType)packetTypeByte);
 		}
 
-		internal readonly byte[] _data;
+		internal readonly byte[] Data;
 
 		protected SSLPacket(byte[] data)
 		{
 			if (null == data)
-				throw new ArgumentNullException("data");
+				throw new ArgumentNullException(nameof(data));
 			if (data.Length < HeaderLength || data.Length > ushort.MaxValue + HeaderLength)
-				throw new ArgumentOutOfRangeException("data", "data must be at least " + HeaderLength + " bytes and no more than " + (ushort.MaxValue + HeaderLength) + " bytes long.");
+				throw new ArgumentOutOfRangeException(nameof(data), "data must be at least " + HeaderLength + " bytes and no more than " + (ushort.MaxValue + HeaderLength) + " bytes long.");
 			if (!IsSSLPacketType(data[0]))
+				throw new ArgumentOutOfRangeException(nameof(data), "Unrecognized SSL packet type " + data[0]);
 			if (HeaderLength + GetPayloadLength(data) != data.Length)
-				throw new ArgumentOutOfRangeException("data", "Payload length in data does not match length of data.");
+				throw new ArgumentOutOfRangeException(nameof(data), "Payload length in data does not match length of data.");
 			if (!ProtocolVersionNumbers.ContainsKey((data[1] << 8) | data[2]))
-				throw new ArgumentOutOfRangeException("data", "Unrecognized SSL protocol version " + data[1] + "." + data[2] + ".");
-			_data = data;
+				throw new ArgumentOutOfRangeException(nameof(data), "Unrecognized SSL protocol version " + data[1] + "." + data[2] + ".");
+			Data = data;
 		}
 
-		public SslPacketType PacketType
-		{
-			get { return (SslPacketType)_data[0]; }
-		}
+		public SslPacketType PacketType => (SslPacketType)Data[0];
 
-		public SslProtocols SslProtocol
-		{
-			get
-			{
-				return ProtocolVersionNumbers[(_data[1] << 8) | _data[2]];
-			}
-		}
+		public SslProtocols SslProtocol => ProtocolVersionNumbers[(Data[1] << 8) | Data[2]];
 
-		public ushort PayloadLength
-		{
-			get { return GetPayloadLength(_data); }
-		}
+		public ushort PayloadLength => GetPayloadLength(Data);
 
 		private static ushort GetPayloadLength(byte[] data)
 		{
@@ -75,7 +66,7 @@ namespace TDSProtocol
 			get
 			{
 				var pl = new byte[PayloadLength];
-				Buffer.BlockCopy(_data, HeaderLength, pl, 0, pl.Length);
+				Buffer.BlockCopy(Data, HeaderLength, pl, 0, pl.Length);
 				return pl;
 			}
 		}
@@ -86,7 +77,7 @@ namespace TDSProtocol
 				throw new ArgumentException("packetType must be specified if readPacketType is false.");
 
 			var header = new byte[HeaderLength];
-			int headerBytesRead = 0;
+			int headerBytesRead;
 
 			if (readPacketType)
 			{
@@ -123,6 +114,7 @@ namespace TDSProtocol
 				var thisRead = await stream.ReadAsync(data, payloadBytesRead + HeaderLength, payloadLength - payloadBytesRead).ConfigureAwait(false);
 				if (thisRead == 0)
 					throw new SSLInvalidPacketException("Stream was closed mid-payload", data, HeaderLength + payloadBytesRead);
+				payloadBytesRead += thisRead;
 			}
 
 			return new SSLPacket(data);
@@ -130,7 +122,7 @@ namespace TDSProtocol
 
 		public Task WriteToStreamAsync(Stream stream)
 		{
-			return stream.WriteAsync(_data, 0, _data.Length);
+			return stream.WriteAsync(Data, 0, Data.Length);
 		}
 	}
 }

@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TDSProxy.Configuration
 {
@@ -17,12 +13,10 @@ namespace TDSProxy.Configuration
 
 		public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value)
 		{
-			var strValue = value as string;
-			if (null != strValue)
+			if (value is string strValue)
 				return IPAddress.Parse(strValue);
-			var ipAddrValue = value as IPAddress;
-			if (null != ipAddrValue)
-				return ipAddrValue;
+			if (value is IPAddress ipAddressValue)
+				return ipAddressValue;
 			return base.ConvertFrom(context, culture, value);
 		}
 
@@ -34,14 +28,13 @@ namespace TDSProxy.Configuration
 		public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
 		{
 			if (null == destinationType)
-				throw new ArgumentNullException("destinationType");
-			var ipAddr = value as IPAddress;
-			if (null != ipAddr)
+				throw new ArgumentNullException(nameof(destinationType));
+			if (value is IPAddress ipAddress)
 			{
 				if (typeof(string) == destinationType)
-					return ipAddr.ToString();
+					return ipAddress.ToString();
 				if (destinationType.IsAssignableFrom(typeof(IPAddress)))
-					return ipAddr;
+					return ipAddress;
 			}
 			return base.ConvertTo(context, culture, value, destinationType);
 		}

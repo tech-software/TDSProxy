@@ -2,87 +2,70 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public class SMPPacket
 	{
 		#region Log4Net
-		static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+		static readonly log4net.ILog log =
+			log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
 		#endregion
 
 		protected const int HeaderLength = 16;
 
-		private static readonly HashSet<SmpPacketType> _knownPacketTypes = new HashSet<SmpPacketType>(Enum.GetValues(typeof(SmpPacketType)).Cast<SmpPacketType>());
+		private static readonly HashSet<SmpPacketType> KnownPacketTypes =
+			new HashSet<SmpPacketType>(Enum.GetValues(typeof(SmpPacketType)).Cast<SmpPacketType>());
+
 		public static bool IsSMPPacketType(byte packetTypeByte)
 		{
-			return _knownPacketTypes.Contains((SmpPacketType)packetTypeByte);
+			return KnownPacketTypes.Contains((SmpPacketType)packetTypeByte);
 		}
 
-		internal readonly byte[] _data;
+		internal readonly byte[] Data;
 
 		protected SMPPacket(byte[] data)
 		{
 			if (null == data)
-				throw new ArgumentNullException("data");
+				throw new ArgumentNullException(nameof(data));
 			if (data.Length < HeaderLength)
-				throw new ArgumentOutOfRangeException("data", "Data length insufficient to contain SMP header.");
+				throw new ArgumentOutOfRangeException(nameof(data), "Data length insufficient to contain SMP header.");
 			if (!IsSMPPacketType(data[0]))
-				throw new ArgumentOutOfRangeException("data", "Not an SMP packet type: " + data[0].ToString("X2"));
+				throw new ArgumentOutOfRangeException(nameof(data),
+				                                      "Not an SMP packet type: " + data[0].ToString("X2"));
 			if (data.Length != GetPacketLength(data))
-				throw new ArgumentOutOfRangeException("data", "Data length does not match length in header.");
-			_data = data;
+				throw new ArgumentOutOfRangeException(nameof(data), "Data length does not match length in header.");
+			Data = data;
 		}
 
 		private static uint GetPacketLength(byte[] data)
 		{
-			return unchecked((uint)((data[7] << 24) | (data[6] << 16) | (data[5] << 8) | (data[4])));
+			return unchecked ((uint)((data[7] << 24) | (data[6] << 16) | (data[5] << 8) | (data[4])));
 		}
 
-		public SmpPacketType PacketType
-		{
-			get { return (SmpPacketType)_data[0]; }
-		}
+		public SmpPacketType PacketType => (SmpPacketType)Data[0];
 
-		public SmpFlags Flags
-		{
-			get { return (SmpFlags)_data[1]; }
-		}
+		public SmpFlags Flags => (SmpFlags)Data[1];
 
-		public ushort SID
-		{
-			get { return unchecked((ushort)((_data[3] << 8) | _data[2])); }
-		}
+		public ushort SID => unchecked ((ushort)((Data[3] << 8) | Data[2]));
 
-		public uint Length
-		{
-			get { return GetPacketLength(_data); }
-		}
+		public uint Length => GetPacketLength(Data);
 
-		public uint SeqNum
-		{
-			get
-			{
-				return unchecked((uint)((_data[11] << 24) | (_data[10] << 16) | (_data[9] << 8) | _data[8]));
-			}
-		}
+		public uint SeqNum => unchecked ((uint)((Data[11] << 24) | (Data[10] << 16) | (Data[9] << 8) | Data[8]));
 
-		public uint Window
-		{
-			get
-			{
-				return unchecked((uint)((_data[15] << 24) | (_data[14] << 16) | (_data[13] << 8) | _data[12]));
-			}
-		}
+		public uint Window => unchecked ((uint)((Data[15] << 24) | (Data[14] << 16) | (Data[13] << 8) | Data[12]));
 
 		public byte[] Payload
 		{
 			get
 			{
 				var pl = new byte[Length - HeaderLength];
-				Buffer.BlockCopy(_data, HeaderLength, pl, 0, pl.Length);
+				Buffer.BlockCopy(Data, HeaderLength, pl, 0, pl.Length);
 				return pl;
 			}
 		}
@@ -92,13 +75,15 @@ namespace TDSProtocol
 			return ReadFromStreamAsync(stream, readPacketType, packetType).Result;
 		}
 
-		public static async Task<SMPPacket> ReadFromStreamAsync(Stream stream, bool readPacketType, SmpPacketType? packetType)
+		public static async Task<SMPPacket> ReadFromStreamAsync(Stream stream,
+		                                                        bool readPacketType,
+		                                                        SmpPacketType? packetType)
 		{
 			if ((!readPacketType) && (!packetType.HasValue))
 				throw new ArgumentException("packetType must be specified if readPacketType is false.");
 
 			var header = new byte[HeaderLength];
-			int packetBytesRead = 0;
+			int packetBytesRead;
 
 			if (readPacketType)
 			{
@@ -107,19 +92,31 @@ namespace TDSProtocol
 					return null;
 
 				if (!IsSMPPacketType(header[0]))
-					throw new SMPInvalidPacketException("Packet type " + header[0].ToString("X2") + " is not a recognized MC-SMP packet type.", header, 1);
+					throw new SMPInvalidPacketException(
+						"Packet type " + header[0].ToString("X2") + " is not a recognized MC-SMP packet type.",
+						header,
+						1);
 			}
 			else
 			{
 				header[0] = (byte)packetType.Value;
 				packetBytesRead = 1;
 			}
+
 			if (packetType.HasValue && (byte)packetType.Value != header[0])
-				throw new SMPInvalidPacketException("Packet type " + (SmpPacketType)header[0] + " does not match specified value of " + packetType.Value + ".", header, 1);
+				throw new SMPInvalidPacketException(
+					"Packet type " +
+					(SmpPacketType)header[0] +
+					" does not match specified value of " +
+					packetType.Value +
+					".",
+					header,
+					1);
 
 			while (packetBytesRead < HeaderLength)
 			{
-				var thisRead = await stream.ReadAsync(header, packetBytesRead, HeaderLength - packetBytesRead).ConfigureAwait(false);
+				var thisRead = await stream.ReadAsync(header, packetBytesRead, HeaderLength - packetBytesRead)
+				                           .ConfigureAwait(false);
 				if (thisRead == 0)
 					throw new SSLInvalidPacketException("Stream was closed mid-header", header, packetBytesRead);
 				packetBytesRead += thisRead;
@@ -131,9 +128,12 @@ namespace TDSProtocol
 
 			while (packetBytesRead < packetLength)
 			{
-				var thisRead = await stream.ReadAsync(data, packetBytesRead, packetLength - packetBytesRead).ConfigureAwait(false);
+				var thisRead = await stream.ReadAsync(data, packetBytesRead, packetLength - packetBytesRead)
+				                           .ConfigureAwait(false);
 				if (thisRead == 0)
-					throw new SSLInvalidPacketException("Stream was closed mid-payload", data, HeaderLength + packetBytesRead);
+					throw new SSLInvalidPacketException("Stream was closed mid-payload",
+					                                    data,
+					                                    HeaderLength + packetBytesRead);
 				packetBytesRead += thisRead;
 			}
 
@@ -147,7 +147,7 @@ namespace TDSProtocol
 
 		public Task WriteToStreamAsync(Stream stream)
 		{
-			return stream.WriteAsync(_data, 0, _data.Length);
+			return stream.WriteAsync(Data, 0, Data.Length);
 		}
 	}
 }

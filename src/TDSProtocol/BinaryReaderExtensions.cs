@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public static class BinaryReaderExtensions
 	{
 		public static short ReadBigEndianInt16(this BinaryReader reader)
@@ -24,7 +22,7 @@ namespace TDSProtocol
 		public static int ReadBigEndianInt32(this BinaryReader reader)
 		{
 			var buffer = reader.ReadBytes(4);
-			return (int)((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]);
+			return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
 		}
 
 		public static uint ReadBigEndianUInt32(this BinaryReader reader)

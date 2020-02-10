@@ -1,7 +1,9 @@
 ﻿using System;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public enum TDSTokenType : byte
 	{
 		AltMetaData = 0x88,

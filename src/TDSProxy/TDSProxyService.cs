@@ -1,23 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
-
-using TDSProxy.Authentication;
 
 namespace TDSProxy
 {
-	public partial class TDSProxyService : ServiceBase
+	public sealed partial class TDSProxyService : ServiceBase
 	{
 		#region Log4Net
 		static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -32,7 +22,8 @@ namespace TDSProxy
 
 		private bool _stopRequested;
 
-		private static Configuration.TdsProxySection _configuration = null;
+		private static Configuration.TdsProxySection _configuration;
+		// ReSharper disable once MemberCanBePrivate.Global
 		public static Configuration.TdsProxySection Configuration
 		{
 			get 
@@ -75,18 +66,22 @@ namespace TDSProxy
 			if (VerboseLogging)
 				log.Debug("Verbose logging is on.");
 
+			// ReSharper disable once StringLiteralTypo
 			VerboseLoggingInWrapper = args.Any(a => string.Equals(a, "wrapperverbose", StringComparison.OrdinalIgnoreCase));
 			if (VerboseLoggingInWrapper)
 				log.Debug("Verbose logging is on in TDS/SSL wrapper.");
 
+			// ReSharper disable once StringLiteralTypo
 			TDSProtocol.TDSPacket.DumpPackets = args.Any(a => string.Equals(a, "packetdump", StringComparison.OrdinalIgnoreCase));
 			if (TDSProtocol.TDSPacket.DumpPackets)
 				log.Debug("Packet dumping is on.");
 
+			// ReSharper disable once StringLiteralTypo
 			SkipLoginProcessing = args.Any(a => string.Equals(a, "skiplogin", StringComparison.OrdinalIgnoreCase));
 			if (SkipLoginProcessing)
 				log.Debug("Skipping login processing.");
 
+			// ReSharper disable once StringLiteralTypo
 			AllowUnencryptedConnections = args.Any(a => string.Equals(a, "allowunencrypted", StringComparison.OrdinalIgnoreCase));
 			if (AllowUnencryptedConnections)
 				log.Debug("Allowing unencrypted connections (but encryption must be supported because we will not allow unencrypted login).");
@@ -100,7 +95,7 @@ namespace TDSProxy
 
 		protected override void OnStop() => Stop();
 
-		public void Stop()
+		public new void Stop()
 		{
 			log.Info("Stopping TDSProxyService");
 			LogStats();
@@ -109,6 +104,8 @@ namespace TDSProxy
 			OnStopping(EventArgs.Empty);
 			log.Info("\r\n----------------\r\nService stopped.\r\n----------------\r\n");
 		}
+
+		public bool StopRequested => _stopRequested;
 
 		protected override void OnPause()
 		{
@@ -143,17 +140,22 @@ namespace TDSProxy
 
 		public event EventHandler Stopping;
 
-		protected virtual void OnStopping(EventArgs e) => Stopping?.Invoke(this, e);
+		private void OnStopping(EventArgs e) => Stopping?.Invoke(this, e);
 
 		private void StartListeners()
 		{
 			foreach (Configuration.ListenerElement listenerConfig in Configuration.Listeners)
+				// ReSharper disable once ObjectCreationAsStatement -- constructed object registers itself
 				new TDSListener(this, listenerConfig);
 		}
 
 		private void StopListeners()
 		{
-			var listeners = new List<TDSListener>(_listeners);
+			List<TDSListener> listeners;
+			lock (_listeners)
+				listeners = new List<TDSListener>(_listeners);
+
+			// NOTE: listeners de-register themselves
 			foreach (var listener in listeners)
 				listener.Dispose();
 		}
@@ -168,9 +170,9 @@ namespace TDSProxy
 		{
 			log.InfoFormat(
 				"{0} active connections ({1} connections started since last restart, {2} connections collected without being closed first)",
-				TDSConnection._activeConnectionCount,
-				TDSConnection._totalConnections,
-				TDSConnection._unclosedCollections);
+				TDSConnection.ActiveConnectionCount,
+				TDSConnection.TotalConnections,
+				TDSConnection.UnclosedCollections);
 		}
 
 		internal void AddListener(TDSListener listener)

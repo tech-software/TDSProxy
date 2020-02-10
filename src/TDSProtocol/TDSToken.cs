@@ -4,27 +4,34 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.Remoting.Messaging;
+using JetBrains.Annotations;
 
 namespace TDSProtocol
 {
+	[PublicAPI]
 	public abstract class TDSToken
 	{
 		#region TdsVersion
-		[ThreadStatic]
-		private static uint _tdsVersion;
+
+		private const string LccKeyForTdsVersion = "com.techsoftware.TDSProtocol.TdsVersion";
+
 		/// <summary>
-		/// TdsVersion for the current message processing. Stored in a ThreadStatic - ***DO NOT RELY ON THIS SURVIVNG "await"***
+		/// TdsVersion for the current message processing.
 		/// </summary>
 		public static uint TdsVersion
 		{
-			get { return _tdsVersion; }
-			set { _tdsVersion = value; }
+			get => (CallContext.LogicalGetData(LccKeyForTdsVersion) as uint?).GetValueOrDefault();
+			set => CallContext.LogicalSetData(LccKeyForTdsVersion, value);
 		}
+
 		#endregion
 
 		protected internal readonly TDSTokenStreamMessage Message;
+
+		public int ReceivedOffset { get; private set; }
+
+		public int ReceivedLength { get; private set; }
 
 		protected TDSToken(TDSTokenStreamMessage message)
 		{
@@ -32,10 +39,13 @@ namespace TDSProtocol
 		}
 
 		#region TokenId
+
 		public abstract TDSTokenType TokenId { get; }
+
 		#endregion
 
 		#region WriteToBinaryWriter
+
 		protected internal void WriteToBinaryWriter(BinaryWriter bw)
 		{
 			bw.Write((byte)TokenId);
@@ -43,49 +53,67 @@ namespace TDSProtocol
 		}
 
 		protected abstract void WriteBodyToBinaryWriter(BinaryWriter bw);
+
 		#endregion
 
-#if false
 		#region ReadFromBinaryReader
-		protected abstract void ReadFromBinaryReader(BinaryReader br);
 
-		protected internal static TDSToken ReadFromBinaryReader(TDSTokenStreamMessage message, BinaryReader br)
+		protected abstract int ReadFromBinaryReader(BinaryReader br);
+
+		protected internal static TDSToken ReadFromBinaryReader(TDSTokenStreamMessage message, BinaryReader br, int initialOffset)
 		{
 			var tokenId = (TDSTokenType)br.ReadByte();
-			var token = _concreteTypeConstructors[tokenId](message);
-			token.ReadFromBinaryReader(br);
-			return token;
+			try
+			{
+				var token = ConcreteTypeConstructors[tokenId](message);
+				token.ReceivedOffset = initialOffset;
+				token.ReceivedLength = 1 + token.ReadFromBinaryReader(br);
+				return token;
+			}
+			catch (Exception ex)
+			{
+				throw new TDSInvalidMessageException($"Failed to initialize {tokenId} token",
+				                                     message?.MessageType ?? unchecked ((TDSMessageType)(-1)),
+				                                     message?.Payload,
+				                                     ex);
+			}
 		}
+
 		#endregion
-#endif
 
 		#region Implementation registry
 
-		private static readonly Type[] _implementationConstructorParameters = new Type[] { typeof(TDSTokenStreamMessage) };
+		private static readonly Type[] ImplementationConstructorParameters =
+			{typeof(TDSTokenStreamMessage)};
+
 		private static Func<TDSTokenStreamMessage, TDSToken> MakeConstructor(Type t)
 		{
 			// Get default constructor
 			var ci = t.GetConstructor(
-				BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
-				null,
-				_implementationConstructorParameters,
-				null);
+				         BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
+				         null,
+				         ImplementationConstructorParameters,
+				         null) ??
+			         throw new InvalidOperationException(
+				         $"Unable to find constructor from TDSTokenStreamMessage for type {t.FullName}");
 
 			// Generate IL function to invoke the default constructor
-			var dm = new DynamicMethod("_dynamic_constructor", t, _implementationConstructorParameters, t);
+			var dm = new DynamicMethod("_dynamic_constructor", t, ImplementationConstructorParameters, t);
 			var ilg = dm.GetILGenerator();
 			ilg.Emit(OpCodes.Ldarg_0);
 			ilg.Emit(OpCodes.Newobj, ci);
 			ilg.Emit(OpCodes.Ret);
-			return (Func<TDSTokenStreamMessage, TDSToken>)dm.CreateDelegate(typeof(Func<TDSTokenStreamMessage, TDSToken>));
+			return (Func<TDSTokenStreamMessage, TDSToken>)dm.CreateDelegate(
+				typeof(Func<TDSTokenStreamMessage, TDSToken>));
 		}
 
-		private readonly static Dictionary<TDSTokenType, Func<TDSTokenStreamMessage, TDSToken>> _concreteTypeConstructors =
-			(
-				from cls in Assembly.GetExecutingAssembly().GetTypes()
-				where !cls.IsAbstract && typeof(TDSToken).IsAssignableFrom(cls)
-				select cls
-			).ToDictionary(t => MakeConstructor(t)(null).TokenId, new Func<Type, Func<TDSTokenStreamMessage, TDSToken>>(MakeConstructor));
+		private static readonly Dictionary<TDSTokenType, Func<TDSTokenStreamMessage, TDSToken>>
+			ConcreteTypeConstructors =
+				(
+					from cls in Assembly.GetExecutingAssembly().GetTypes()
+					where !cls.IsAbstract && typeof(TDSToken).IsAssignableFrom(cls)
+					select cls
+				).ToDictionary(t => MakeConstructor(t)(null).TokenId, MakeConstructor);
 
 		#endregion
 	}

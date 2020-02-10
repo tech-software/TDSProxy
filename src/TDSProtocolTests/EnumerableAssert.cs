@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace TDSProtocolTests
@@ -15,37 +14,58 @@ namespace TDSProtocolTests
 		public static void AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual, IComparer<T> comparer)
 		{
 			// Both null? That's equal!
-			if (expected == null && actual == null)
+			if (expected is null && actual is null)
 				return;
 
 			// Both should be non-null, then
-			if (expected == null)
+			if (expected is null)
 				Assert.Fail("Expected null, actual non-null");
-			if (actual == null)
+			if (actual is null)
 				Assert.Fail("Expected non-null, actual null");
 
 			// Iterator over each enumerable, comparing each element, until at least one iterator is exhausted
-			var expectedIterator = expected.GetEnumerator();
-			var actualIterator = actual.GetEnumerator();
-			var moreExpected = expectedIterator.MoveNext();
-			var moreActual = actualIterator.MoveNext();
-			for (uint idx = 1; moreExpected && moreActual; moreExpected = expectedIterator.MoveNext(), moreActual = actualIterator.MoveNext(), idx++)
+			using (var expectedIterator = expected.GetEnumerator())
+			using (var actualIterator = actual.GetEnumerator())
 			{
-				if (comparer.Compare(expectedIterator.Current, actualIterator.Current) != 0)
+				bool moreExpected, moreActual;
+				uint count = 0;
+				for (uint idx = 1;
+					 // NOTE: use of & not && is deliberate because we DO NOT want to shortcut
+				     (moreExpected = expectedIterator.MoveNext()) & (moreActual = actualIterator.MoveNext());
+				     idx++, count++)
 				{
-					var lastDigit = idx % 10;
-					Assert.AreEqual(
-						expectedIterator.Current,
-						actualIterator.Current,
-						"The {0}{1} element in the sequences differed",
-						idx,
-						(lastDigit > 3 || lastDigit == 0 || ((idx / 10) == 1)) ? "th" : lastDigit == 1 ? "st" : lastDigit == 2 ? "nd" : "rd");
+					if (comparer.Compare(expectedIterator.Current, actualIterator.Current) != 0)
+					{
+						var lastDigit = idx % 10;
+						Assert.AreEqual(
+							expectedIterator.Current,
+							actualIterator.Current,
+							"The {0}{1} element in the sequences differed",
+							idx,
+							(lastDigit > 3 || lastDigit == 0 || ((idx / 10) == 1)) ? "th" :
+							lastDigit == 1 ? "st" :
+							lastDigit == 2 ? "nd" : "rd");
+					}
+				}
+
+				// Check neither iterator has more
+
+				if (moreExpected)
+				{
+					uint expectedCount = count + 1;
+					while (expectedIterator.MoveNext())
+						expectedCount++;
+					Assert.AreEqual(expectedCount, count, "Sequences were not of same length");
+				}
+
+				if (moreActual)
+				{
+					uint actualCount = count + 1;
+					while (actualIterator.MoveNext())
+						actualCount++;
+					Assert.AreEqual(count, actualCount, "Sequences were not of same length");
 				}
 			}
-
-			// Check neither iterator has more
-			if (moreExpected || moreActual)
-				Assert.AreEqual(expected.Count(), actual.Count(), "Sequences were not of same length");
 		}
 	}
 }
