@@ -106,12 +106,13 @@ namespace TDSProxy
 			_service.AddListener(this);
 
 			log.InfoFormat(
-				"Listening on {0} and forwarding to {1} (SSL cert DN {2}; serial {3}; authenticator {4})",
+				"Listening on {0} and forwarding to {1} (SSL cert DN {2}; expires {5} serial {3}; authenticator {4})",
 				bindToEP,
 				ForwardTo,
 				Certificate.Subject,
 				Certificate.GetSerialNumberString(),
-				Authenticator.GetType().FullName);
+				Authenticator.GetType().FullName,
+				Certificate.GetExpirationDateString());
 		}
 
 		public IAuthenticator Authenticator { get; private set; }
@@ -125,11 +126,14 @@ namespace TDSProxy
 			{
 				// Get connection
 				TcpClient readClient = ((TcpListener)result.AsyncState).EndAcceptTcpClient(result);
-				log.DebugFormat("Accepted connection from {0} on {1}, will forward to {2}", readClient.Client.RemoteEndPoint, readClient.Client.LocalEndPoint, ForwardTo);
+
+				//Log as Info so we have the open (and the close elsewhere)
+				log.InfoFormat("Accepted connection from {0} on {1}, will forward to {2}", readClient.Client.RemoteEndPoint, readClient.Client.LocalEndPoint, ForwardTo);
 
 				// Handle stop requested
 				if (_service?.StopRequested == true)
 				{
+					log.Info("Service was ending, closing connection and returning.");
 					readClient.Close();
 					return;
 				}

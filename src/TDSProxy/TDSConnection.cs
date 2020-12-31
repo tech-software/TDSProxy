@@ -460,7 +460,8 @@ namespace TDSProxy
 		{
 			if (_state != StateEnum.Closed)
 			{
-				log.DebugFormat("Closing connection from {0} that was forwarding to {1}", _outsideEP, _insideEP);
+				//Log this at Info level so we can see disconnects
+				log.InfoFormat("Closing connection from {0} that was forwarding to {1}", _outsideEP, _insideEP);
 				Interlocked.Decrement(ref ActiveConnectionCount);
 				_state = StateEnum.Closed;
 				_service.Stopping -=
@@ -624,48 +625,61 @@ namespace TDSProxy
 		{
 			try
 			{
-				var packetsFromClient = await TDSPacket.ReadAsync(_outsideStream);
-				var packetList = packetsFromClient as List<TDSPacket> ?? packetsFromClient.ToList();
-				_spid = packetList[0].SPID;
-				var message = TDSMessage.FromPackets(packetList);
-				var preLogin = message as TDSPreLoginMessage;
-				if (null == preLogin)
-				{
-					log.ErrorFormat("Client {0} sent a {1} message when expecting a PreLogin message",
-					                _outsideEP,
-					                message.MessageType);
-					return null;
-				}
+				//Let's give them 10 seconds to send their info.
+				var cts = new CancellationTokenSource(10_000);
 
-				if (!preLogin.Encryption.HasValue)
+				//The underlying read on stream doesn't support cancellation so don't bother
+				//	with sending the cancellation token. This is ugly as hell, but it will
+				//	cause the read to fail.
+				using (cts.Token.Register(() => _outsideStream.Close()))
 				{
-					log.InfoFormat("Client {0} sent a PreLogin message without the Encryption setting", _outsideEP);
-					return null;
-				}
+					var packetsFromClient = await TDSPacket.ReadAsync(_outsideStream);
+					var packetList = packetsFromClient as List<TDSPacket> ?? packetsFromClient.ToList();
+					_spid = packetList[0].SPID;
+					var message = TDSMessage.FromPackets(packetList);
+					var preLogin = message as TDSPreLoginMessage;
+					if (null == preLogin)
+					{
+						log.DebugFormat("Client {0} sent a {1} message when expecting a PreLogin message",
+							_outsideEP,
+							message.MessageType);
+						return null;
+					}
 
-				if (preLogin.Encryption == TDSPreLoginMessage.EncryptionEnum.NotSupported)
-				{
-					log.InfoFormat(
-						"Client {0} does not support encryption; responding that encryption is required prior to dropping connection",
-						_outsideEP);
-					preLogin.Encryption = TDSPreLoginMessage.EncryptionEnum.Required;
-					await preLogin.WriteAsPacketsAsync(_outsideStream, _packetLength, _spid).ConfigureAwait(false);
-					return null;
-				}
+					if (!preLogin.Encryption.HasValue)
+					{
+						log.DebugFormat("Client {0} sent a PreLogin message without the Encryption setting", _outsideEP);
+						return null;
+					}
 
-				return preLogin;
+					if (preLogin.Encryption == TDSPreLoginMessage.EncryptionEnum.NotSupported)
+					{
+						log.DebugFormat(
+							"Client {0} does not support encryption; responding that encryption is required prior to dropping connection",
+							_outsideEP);
+						preLogin.Encryption = TDSPreLoginMessage.EncryptionEnum.Required;
+						await preLogin.WriteAsPacketsAsync(_outsideStream, _packetLength, _spid).ConfigureAwait(false);
+						return null;
+					}
+
+					return preLogin;
+				}
 			}
 			catch (EndOfStreamException)
 			{
-				log.InfoFormat("Client {0} closed the connection before sending any data", _outsideEP);
+				log.DebugFormat("Client {0} closed the connection before sending any data", _outsideEP);
+			}
+			catch (IOException)
+			{
+				log.DebugFormat("IOException reading initial packets from {0}, this is typical for scanners, ignore it.", _outsideEP);
 			}
 			catch (TDSInvalidPacketException ipe)
 			{
-				log.Error($"Client {_outsideEP} sent invalid TDS data", ipe);
+				log.Debug($"Client {_outsideEP} sent invalid TDS data", ipe);
 			}
 			catch (TDSInvalidMessageException ime)
 			{
-				log.Error($"Client {_outsideEP} sent invalid TDS message within valid TDS packets", ime);
+				log.Debug($"Client {_outsideEP} sent invalid TDS message within valid TDS packets", ime);
 			}
 			catch (ObjectDisposedException) when (_state == StateEnum.Closed)
 			{
@@ -673,6 +687,9 @@ namespace TDSProxy
 			}
 			catch (Exception e)
 			{
+				//Most "errors" are logged as Debug since we don't care about them from a 
+				//	long term view. But we should have most caught above, so log what's left
+				//	as Error so we can see it easier.
 				log.Error($"Error reading PreLogin from client {_outsideEP}", e);
 			}
 
