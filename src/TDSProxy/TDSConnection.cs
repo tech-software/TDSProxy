@@ -623,10 +623,11 @@ namespace TDSProxy
 
 		private async Task<TDSPreLoginMessage> ReadPreLoginFromClient()
 		{
+			//Let's give them 10 seconds to send their info.
+			var cts = new CancellationTokenSource(10_000);
+
 			try
 			{
-				//Let's give them 10 seconds to send their info.
-				var cts = new CancellationTokenSource(10_000);
 
 				//The underlying read on stream doesn't support cancellation so don't bother
 				//	with sending the cancellation token. This is ugly as hell, but it will
@@ -681,8 +682,11 @@ namespace TDSProxy
 			{
 				log.Debug($"Client {_outsideEP} sent invalid TDS message within valid TDS packets", ime);
 			}
-			catch (ObjectDisposedException) when (_state == StateEnum.Closed)
+			catch (ObjectDisposedException) when (_state == StateEnum.Closed || cts.IsCancellationRequested)
 			{
+				if (cts.IsCancellationRequested)
+					log.DebugFormat("Client {0} never told us anything. Is he mute?", _outsideEP);
+
 				// Normal, ignore it.
 			}
 			catch (Exception e)
