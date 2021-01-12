@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
@@ -17,7 +18,7 @@ namespace TDSProtocol
 		protected internal byte[] Payload { get; set; }
 		protected internal byte[] ReceivedPayload { get; private set; }
 
-		public static TDSMessage FromPackets(IEnumerable<TDSPacket> packets, TDSMessageType? overrideMessageType = null)
+		public static TDSMessage FromPackets(IEnumerable<TDSPacket> packets, TDSMessageType? overrideMessageType = null, TDSMessageType? expectMessageType = null)
 		{
 			if (null == packets)
 				return null;
@@ -35,6 +36,12 @@ namespace TDSProtocol
 
 			// Instantiate the concrete message type and fill out the payload
 			TDSMessage message  = constructor();
+
+			if (expectMessageType != null && message.MessageType != expectMessageType)
+			{
+				throw new ProtocolViolationException($"Got a {message.MessageType}, expected a {expectMessageType}");
+			}
+
 			byte[] payload = new byte[packetList.Sum(p => p.Payload.Length)];
 			int payloadOffset = 0;
 			foreach (var packet in packetList)

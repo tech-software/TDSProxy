@@ -637,7 +637,7 @@ namespace TDSProxy
 					var packetsFromClient = await TDSPacket.ReadAsync(_outsideStream);
 					var packetList = packetsFromClient as List<TDSPacket> ?? packetsFromClient.ToList();
 					_spid = packetList[0].SPID;
-					var message = TDSMessage.FromPackets(packetList);
+					var message = TDSMessage.FromPackets(packetList, null, TDSMessageType.PreLogin);
 					var preLogin = message as TDSPreLoginMessage;
 					if (null == preLogin)
 					{
@@ -649,7 +649,8 @@ namespace TDSProxy
 
 					if (!preLogin.Encryption.HasValue)
 					{
-						log.DebugFormat("Client {0} sent a PreLogin message without the Encryption setting", _outsideEP);
+						log.DebugFormat("Client {0} sent a PreLogin message without the Encryption setting",
+							_outsideEP);
 						return null;
 					}
 
@@ -672,7 +673,9 @@ namespace TDSProxy
 			}
 			catch (IOException)
 			{
-				log.DebugFormat("IOException reading initial packets from {0}, this is typical for scanners, ignore it.", _outsideEP);
+				log.DebugFormat(
+					"IOException reading initial packets from {0}, this is typical for scanners, ignore it.",
+					_outsideEP);
 			}
 			catch (TDSInvalidPacketException ipe)
 			{
@@ -688,6 +691,10 @@ namespace TDSProxy
 					log.DebugFormat("Client {0} never told us anything. Is he mute?", _outsideEP);
 
 				// Normal, ignore it.
+			}
+			catch (ProtocolViolationException ex)
+			{
+				log.DebugFormat("Received a protocol violation processing {0}. Message {1}", _outsideEP, ex.Message);
 			}
 			catch (Exception e)
 			{

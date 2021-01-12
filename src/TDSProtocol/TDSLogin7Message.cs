@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -783,21 +784,21 @@ namespace TDSProtocol
 						Payload);
 				uint EndOffset(uint startOffset, uint itemLength) => itemLength > 0 ? startOffset + itemLength : 0;
 				var dataEndOffset = new[]
-				                    {
-					                    hostNameOffset,
-					                    EndOffset(hostNameOffset, hostNameLength),
-					                    EndOffset(userNameOffset, userNameLength),
-					                    EndOffset(passwordOffset, passwordLength),
-					                    EndOffset(appNameOffset, appNameLength),
-					                    EndOffset(serverNameOffset, serverNameLength),
-					                    hasExtension ? EndOffset(extensionOffset, extensionLength) : 0,
-					                    EndOffset(cltIntNameOffset, cltIntNameLength),
-					                    EndOffset(languageOffset, languageLength),
-					                    EndOffset(databaseOffset, databaseLength),
-					                    EndOffset(sspiOffset, sspiLength),
-					                    EndOffset(attachDbFileOffset, attachDbFileLength),
-					                    EndOffset(changePasswordOffset, changePasswordLength)
-				                    }.Max();
+				{
+					hostNameOffset,
+					EndOffset(hostNameOffset, hostNameLength * 2u),
+					EndOffset(userNameOffset, userNameLength * 2u),
+					EndOffset(passwordOffset, passwordLength * 2u),
+					EndOffset(appNameOffset, appNameLength * 2u),
+					EndOffset(serverNameOffset, serverNameLength * 2u),
+					hasExtension ? EndOffset(extensionOffset, extensionLength) : 0,
+					EndOffset(cltIntNameOffset, cltIntNameLength * 2u),
+					EndOffset(languageOffset, languageLength * 2u),
+					EndOffset(databaseOffset, databaseLength * 2u),
+					EndOffset(sspiOffset, sspiLength),
+					EndOffset(attachDbFileOffset, attachDbFileLength * 2u),
+					EndOffset(changePasswordOffset, changePasswordLength * 2u)
+				}.Max();
 
 				if (dataEndOffset > length)
 					throw new TDSInvalidMessageException(
@@ -910,7 +911,18 @@ namespace TDSProtocol
 					ms.Position = dataEndOffset;
 
 				if (ms.Position != length)
+				{
+					if (bool.Parse(ConfigurationManager.AppSettings["DumpOnLengthMismatch"] ?? "false"))
+					{
+						var dumpDir = ConfigurationManager.AppSettings["DumpDirectory"];
+						var dumpId = Guid.NewGuid().ToString("D") + ".log";
+						var file = Path.Combine(dumpDir, dumpId);
+						File.WriteAllBytes(file, Payload);
+						log.Debug($"Dumped as {file}");
+					}
+
 					log.WarnFormat("Login message length was {0} but read {1} bytes", length, ms.Position);
+				}
 			}
 		}
 
