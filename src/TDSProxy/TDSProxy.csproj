@@ -83,6 +83,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SampleAuthenticator\SampleAuthenticator.csproj">
+      <Project>{47f41c77-1b67-4cb9-b217-27f1a882a857}</Project>
+      <Name>SampleAuthenticator</Name>
+    </ProjectReference>
     <ProjectReference Include="..\TDSProtocol\TDSProtocol.csproj">
       <Project>{99fcff04-2f8e-4ac9-8136-c2574d1e0f2f}</Project>
       <Name>TDSProtocol</Name>
