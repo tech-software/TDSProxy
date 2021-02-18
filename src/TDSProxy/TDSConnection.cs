@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using TDSProtocol;
+using TDSProxy.Authentication;
 
 namespace TDSProxy
 {
@@ -15,7 +16,7 @@ namespace TDSProxy
 	{
 		#region Log4Net
 
-		static readonly log4net.ILog log =
+		private static readonly log4net.ILog log =
 			log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 		#endregion
@@ -561,11 +562,16 @@ namespace TDSProxy
 						return;
 					}
 
-					var authResult =
-						_listener.Authenticator.Authenticate(_outsideEP.Address,
-						                                     login7.UserName,
-						                                     login7.Password,
-						                                     login7.Database);
+					AuthenticationResult authResult = null;
+					foreach (var lazyA in _listener.Authenticators)
+					{
+						authResult = lazyA.Value.Authenticate(_outsideEP.Address,
+						                                          login7.UserName,
+						                                          login7.Password,
+						                                          login7.Database);
+						if (authResult?.AllowConnection == true) break;
+					}
+
 					bool authOk = null != authResult && authResult.AllowConnection;
 					if (!authOk)
 					{
@@ -634,6 +640,7 @@ namespace TDSProxy
 				//	cause the read to fail.
 				using (cts.Token.Register(() => _outsideStream.Close()))
 				{
+					// ReSharper disable once MethodSupportsCancellation -- see comment above
 					var packetsFromClient = await TDSPacket.ReadAsync(_outsideStream);
 					var packetList = packetsFromClient as List<TDSPacket> ?? packetsFromClient.ToList();
 					_spid = packetList[0].SPID;
@@ -660,6 +667,7 @@ namespace TDSProxy
 							"Client {0} does not support encryption; responding that encryption is required prior to dropping connection",
 							_outsideEP);
 						preLogin.Encryption = TDSPreLoginMessage.EncryptionEnum.Required;
+						// ReSharper disable once MethodSupportsCancellation -- see comment above using block
 						await preLogin.WriteAsPacketsAsync(_outsideStream, _packetLength, _spid).ConfigureAwait(false);
 						return null;
 					}
@@ -921,8 +929,7 @@ namespace TDSProxy
 			         .ConfigureAwait(false);
 		}
 
-		private async Task ProcessAndForwardLogin7(TDSLogin7Message login7,
-		                                           Authentication.AuthenticationResult authResult)
+		private async Task ProcessAndForwardLogin7(TDSLogin7Message login7, AuthenticationResult authResult)
 		{
 			if (login7.TdsVersion >= MaxTdsVersion)
 				login7.TdsVersion = MaxTdsVersion;
@@ -995,7 +1002,7 @@ namespace TDSProxy
 				}
 				catch (EndOfStreamException)
 				{
-					log.InfoFormat("Server {0} closed the connection before responding to LOGIN7 for {1}{2}",
+					log.InfoFormat("Server {0} closed the connection before responding to LOGIN7 for {1}",
 					               _insideEP,
 					               _outsideEP);
 				}

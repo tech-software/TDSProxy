@@ -113,18 +113,8 @@ namespace TDSProxy.Configuration
 			[UsedImplicitly] set => base["sslCertSubjectThumbprint"] = value;
 		}
 
-		[ConfigurationProperty("authenticatorDll", IsRequired = true)]
-		public string AuthenticatorDll
-		{
-			get => (string)base["authenticatorDll"];
-			[UsedImplicitly] set => base["authenticatorDll"] = value;
-		}
-
-		[ConfigurationProperty("authenticatorClass", IsRequired = true)]
-		public string AuthenticatorClass
-		{
-			get => (string)base["authenticatorClass"];
-			[UsedImplicitly] set => base["authenticatorClass"] = value;
-		}
+		[ConfigurationProperty("authenticators", IsDefaultCollection = true, IsRequired = true)]
+		[ConfigurationCollection(typeof(AuthenticatorCollection))]
+		public AuthenticatorCollection Authenticators => (AuthenticatorCollection)base["authenticators"];
 	}
 }

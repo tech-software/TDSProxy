@@ -57,6 +57,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configuration\AuthenticatorCollection.cs" />
+    <Compile Include="Configuration\AuthenticatorElement.cs" />
     <Compile Include="Configuration\IPAddressConverter.cs" />
     <Compile Include="Configuration\ListenerCollection.cs" />
     <Compile Include="Configuration\ListenerElement.cs" />

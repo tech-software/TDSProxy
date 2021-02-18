@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using TDSProxy.Authentication;
+using TDSProxy.Configuration;
 
 namespace TDSProxy
 {
@@ -18,12 +20,11 @@ namespace TDSProxy
 		readonly TDSProxyService _service;
 		readonly TcpListener _tcpListener;
 		readonly CompositionContainer _mefContainer;
-		readonly Lazy<IAuthenticator> _export;
-		bool _stopped;
+		volatile bool _stopped;
 
 		internal readonly X509Certificate Certificate;
 
-		public TDSListener(TDSProxyService service, Configuration.ListenerElement configuration)
+		public TDSListener(TDSProxyService service, ListenerElement configuration)
 		{
 			var insideAddresses = Dns.GetHostAddresses(configuration.ForwardToHost);
 			if (0 == insideAddresses.Length)
@@ -40,23 +41,40 @@ namespace TDSProxy
 
 			try
 			{
-				var catalog = new AssemblyCatalog(configuration.AuthenticatorDll);
+				var catalog = new AggregateCatalog(from AuthenticatorElement a in configuration.Authenticators
+				                                   select new AssemblyCatalog(a.Dll));
 				_mefContainer = new CompositionContainer(catalog);
-				var exports = _mefContainer.GetExports<IAuthenticator>().ToList();
-				var export = exports.FirstOrDefault(a => a.Value.GetType().FullName == configuration.AuthenticatorClass);
-				if (null == export)
+
+				var allExports = _mefContainer.GetExports<IAuthenticator>().ToDictionary(a => a.GetType().GetGenericArguments()[0].FullName);
+				var authenticators = new Lazy<IAuthenticator>[configuration.Authenticators.Count];
+				bool die = false;
+				var used = new List<Lazy<IAuthenticator>>();
+				for (int i = 0; i < configuration.Authenticators.Count; i++)
 				{
-					log.ErrorFormat(
-						"Found dll {0} but not authenticator implementation {1} (DLL exported: {2})",
-						configuration.AuthenticatorDll,
-						configuration.AuthenticatorClass,
-						string.Join("; ", exports.Select(exp => exp.Value.GetType().FullName)));
+					var a = configuration.Authenticators[i];
+					if (!allExports.TryGetValue(a.Class, out var export))
+					{
+						log.ErrorFormat(
+							"For authenticator {0} found dll {1} but not class {2} (exports in catalog: {3})",
+							a.Name,
+							a.Dll,
+							a.Class,
+							string.Join("; ", allExports.Keys));
+						die = true;
+					}
+
+					used.Add(export);
+					authenticators[i] = export;
+				}
+
+				if (die)
+				{
 					Dispose();
 					return;
 				}
-				_export = export;
-				Authenticator = _export.Value;
-				_mefContainer.ReleaseExports(exports.Where(e => e != _export));
+
+				_authenticators = authenticators;
+				_mefContainer.ReleaseExports(allExports.Values.Except(used));
 			}
 			catch (CompositionException ce)
 			{
@@ -106,16 +124,22 @@ namespace TDSProxy
 			_service.AddListener(this);
 
 			log.InfoFormat(
-				"Listening on {0} and forwarding to {1} (SSL cert DN {2}; expires {5} serial {3}; authenticator {4})",
+				"Listening on {0} and forwarding to {1} (SSL cert DN {2}; expires {5} serial {3}; authenticators {4})",
 				bindToEP,
 				ForwardTo,
 				Certificate.Subject,
 				Certificate.GetSerialNumberString(),
-				Authenticator.GetType().FullName,
+				string.Join(", ", from a in Authenticators select a.GetType().FullName),
 				Certificate.GetExpirationDateString());
 		}
 
-		public IAuthenticator Authenticator { get; private set; }
+		//public IAuthenticator Authenticator { get; private set; }
+		private Lazy<IAuthenticator>[] _authenticators;
+
+		public IEnumerable<Lazy<IAuthenticator>> Authenticators =>
+			!_stopped
+				? (Lazy<IAuthenticator>[])_authenticators.Clone()
+				: throw new ObjectDisposedException(nameof(TDSListener));
 
 		// ReSharper disable once MemberCanBePrivate.Global
 		public IPEndPoint ForwardTo { get; }
@@ -159,13 +183,13 @@ namespace TDSProxy
 				_stopped = true;
 				_service?.RemoveListener(this);
 				_tcpListener?.Stop();
-				Authenticator = null;
 				if (null != _mefContainer)
 				{
-					if (null != _export)
-						_mefContainer.ReleaseExport(_export);
+					if (null != _authenticators)
+						_mefContainer.ReleaseExports(_authenticators);
 					_mefContainer.Dispose();
 				}
+				_authenticators = null;
 			}
 		}
 	}
