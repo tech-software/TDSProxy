@@ -7,7 +7,7 @@ using System.ServiceProcess;
 
 namespace TDSProxy
 {
-    public sealed partial class TDSProxyService ////: ServiceBase
+    public sealed partial class TDSProxyService
     {
         #region Log4Net
         static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -41,13 +41,6 @@ namespace TDSProxy
                 return _configuration;
             }
         }
-
-        public TDSProxyService()
-        {
-            InitializeComponent();
-        }
-
-        //protected override void OnStart(string[] args) => Start(args);
 
         public void Start(string[] args)
         {
@@ -93,8 +86,6 @@ namespace TDSProxy
             log.Info("TDSProxyService initialization complete.");
         }
 
-        //protected override void OnStop() => Stop();
-
         //new
         public void Stop()
         {
@@ -107,40 +98,6 @@ namespace TDSProxy
         }
 
         public bool StopRequested => _stopRequested;
-
-        // override
-        //protected void OnPause()
-        //{
-        //    StopListeners();
-        //    log.Info("Service paused.");
-        //}
-
-        // override
-        //protected void OnContinue()
-        //{
-        //    log.Info("Resuming service.");
-        //    RefreshConfiguration();
-        //    StartListeners();
-        //}
-
-        // override
-        //protected void OnCustomCommand(int command)
-        //{
-        //    if (_stopRequested)
-        //        return;
-        //
-        //    switch (command)
-        //    {
-        //        case 200:
-        //            LogStats();
-        //            break;
-        //        case 201:
-        //            StopListeners();
-        //            RefreshConfiguration();
-        //            StartListeners();
-        //            break;
-        //    }
-        //}
 
         public event EventHandler Stopping;
 
@@ -162,12 +119,6 @@ namespace TDSProxy
             // NOTE: listeners de-register themselves
             foreach (var listener in listeners)
                 listener.Dispose();
-        }
-
-        private void RefreshConfiguration()
-        {
-            ConfigurationManager.RefreshSection("tdsProxy");
-            _configuration = null;
         }
 
         private void LogStats()
