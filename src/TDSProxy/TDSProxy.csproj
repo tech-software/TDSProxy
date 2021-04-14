@@ -9,7 +9,7 @@
     <Description>SQL Server TDS protocol proxy</Description>
     <Copyright>Copyright © Tech Software LLC, 2014-2020</Copyright>
     <Deterministic>false</Deterministic>
-    <AssemblyVersion>1.0.*</AssemblyVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <OutputPath>bin\$(Configuration)\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
