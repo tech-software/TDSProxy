@@ -831,20 +831,32 @@ namespace TDSProxy
 
                 if ((login7.OptionFlags2 & TDSLogin7Message.OptionFlags2Enum.IntegratedSecurity) != 0)
                 {
-                    login7.OptionFlags2 = login7.OptionFlags2 ^ TDSLogin7Message.OptionFlags2Enum.IntegratedSecurity;
-                    return login7;
-                    // log.InfoFormat("Client {0} requested integrated security; denying login & dropping connection", _outsideEP);
-                    // await SendLogin7DeniedResponse("Integrated Security not supported.").ConfigureAwait(false);
-                    // return null;
+                    if (TDSProxyService.BypassIntegratedSecurity)
+                    {
+                        login7.OptionFlags2 = login7.OptionFlags2 ^ TDSLogin7Message.OptionFlags2Enum.IntegratedSecurity;
+                        return login7;
+                    }
+                    else
+                    {
+                        log.InfoFormat("Client {0} requested integrated security; denying login & dropping connection", _outsideEP);
+                        await SendLogin7DeniedResponse("Integrated Security not supported.").ConfigureAwait(false);
+                        return null;
+                    }
                 }
 
                 if (null != login7.SSPI && 0 != login7.SSPI.Length)
                 {
-                    login7.SSPI = null;
-                    return login7;
-                    // log.InfoFormat("Client {0} requested SSPI; denying login & dropping connection", _outsideEP);
-                    // await SendLogin7DeniedResponse("SSPI is not supported.").ConfigureAwait(false);
-                    // return null;
+                    if (TDSProxyService.BypassSSPI)
+                    {
+                        login7.SSPI = null;
+                        return login7;
+                    }
+                    else
+                    {
+                        log.InfoFormat("Client {0} requested SSPI; denying login & dropping connection", _outsideEP);
+                        await SendLogin7DeniedResponse("SSPI is not supported.").ConfigureAwait(false);
+                        return null;
+                    }
                 }
 
                 if (null != login7.FeatureExt &&

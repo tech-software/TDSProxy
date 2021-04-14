@@ -17,6 +17,8 @@ namespace TDSProxy
         public static bool VerboseLoggingInWrapper { get; private set; }
         public static bool SkipLoginProcessing { get; private set; }
         public static bool AllowUnencryptedConnections { get; private set; }
+        public static bool BypassIntegratedSecurity { get; private set; } = false;
+        public static bool BypassSSPI { get; private set; } = false;
 
         private readonly HashSet<TDSListener> _listeners = new HashSet<TDSListener>();
 
@@ -64,27 +66,37 @@ namespace TDSProxy
 
             VerboseLogging = args.Any(a => string.Equals(a, "verbose", StringComparison.OrdinalIgnoreCase));
             if (VerboseLogging)
-                log.Debug("Verbose logging is on.");
+                log.Info("Verbose logging is on.");
 
             // ReSharper disable once StringLiteralTypo
             VerboseLoggingInWrapper = args.Any(a => string.Equals(a, "wrapperverbose", StringComparison.OrdinalIgnoreCase));
             if (VerboseLoggingInWrapper)
-                log.Debug("Verbose logging is on in TDS/SSL wrapper.");
+                log.Info("Verbose logging is on in TDS/SSL wrapper.");
 
             // ReSharper disable once StringLiteralTypo
             TDSProtocol.TDSPacket.DumpPackets = args.Any(a => string.Equals(a, "packetdump", StringComparison.OrdinalIgnoreCase));
             if (TDSProtocol.TDSPacket.DumpPackets)
-                log.Debug("Packet dumping is on.");
+                log.Info("Packet dumping is on.");
 
             // ReSharper disable once StringLiteralTypo
             SkipLoginProcessing = args.Any(a => string.Equals(a, "skiplogin", StringComparison.OrdinalIgnoreCase));
             if (SkipLoginProcessing)
-                log.Debug("Skipping login processing.");
+                log.Info("Skipping login processing.");
+
+            // ReSharper disable once StringLiteralTypo
+            BypassIntegratedSecurity = args.Any(a => string.Equals(a, "bypassintegratedsecurity", StringComparison.OrdinalIgnoreCase));
+            if (BypassIntegratedSecurity)
+                log.Info("BypassIntegratedSecurity");
+
+            // ReSharper disable once StringLiteralTypo
+            BypassSSPI = args.Any(a => string.Equals(a, "bypasssspi", StringComparison.OrdinalIgnoreCase));
+            if (BypassSSPI)
+                log.Info("BypassSSPI");
 
             // ReSharper disable once StringLiteralTypo
             AllowUnencryptedConnections = args.Any(a => string.Equals(a, "allowunencrypted", StringComparison.OrdinalIgnoreCase));
             if (AllowUnencryptedConnections)
-                log.Debug("Allowing unencrypted connections (but encryption must be supported because we will not allow unencrypted login).");
+                log.Info("Allowing unencrypted connections (but encryption must be supported because we will not allow unencrypted login).");
 
             _stopRequested = false;
 

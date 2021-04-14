@@ -42,7 +42,6 @@
     <PackageReference Include="System.ComponentModel.Composition" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SampleAuthenticator\SampleAuthenticator.csproj" />
     <ProjectReference Include="..\TDSProtocol\TDSProtocol.csproj" />
     <ProjectReference Include="..\TDSProxy.Authentication\TDSProxy.Authentication.csproj" />
   </ItemGroup>

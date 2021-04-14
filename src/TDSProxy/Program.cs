@@ -1,4 +1,5 @@
 ﻿using System;
+using TDSProxy.Configuration;
 
 namespace TDSProxy
 {
