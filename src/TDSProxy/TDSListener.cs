@@ -162,9 +162,6 @@ namespace TDSProxy
 					return;
 				}
 
-				// Listen for next connection
-				_tcpListener.BeginAcceptTcpClient(AcceptConnection, _tcpListener);
-
 				// Process this connection
 				// ReSharper disable once ObjectCreationAsStatement -- constructed object registers itself
 				new TDSConnection(_service, this, readClient, ForwardTo);
@@ -172,8 +169,11 @@ namespace TDSProxy
 			catch (ObjectDisposedException) { /* We're shutting down, ignore */ }
 			catch (Exception e)
 			{
-				log.Fatal("Error in AcceptConnection, won't resume listening.", e);
+				log.Fatal("Error in AcceptConnection.", e);
 			}
+
+            // Listen for next connection -- Do this here so we accept new connections even if this attempt to accept failed.
+            _tcpListener.BeginAcceptTcpClient(AcceptConnection, _tcpListener);
 		}
 
 		public void Dispose()
