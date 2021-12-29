@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
@@ -45,36 +46,11 @@ namespace TDSProxy
 				                                   select new AssemblyCatalog(a.Dll));
 				_mefContainer = new CompositionContainer(catalog);
 
-				var allExports = _mefContainer.GetExports<IAuthenticator>().ToDictionary(a => a.GetType().GetGenericArguments()[0].FullName);
-				var authenticators = new Lazy<IAuthenticator>[configuration.Authenticators.Count];
-				bool die = false;
-				var used = new List<Lazy<IAuthenticator>>();
-				for (int i = 0; i < configuration.Authenticators.Count; i++)
-				{
-					var a = configuration.Authenticators[i];
-					if (!allExports.TryGetValue(a.Class, out var export))
-					{
-						log.ErrorFormat(
-							"For authenticator {0} found dll {1} but not class {2} (exports in catalog: {3})",
-							a.Name,
-							a.Dll,
-							a.Class,
-							string.Join("; ", allExports.Keys));
-						die = true;
-					}
-
-					used.Add(export);
-					authenticators[i] = export;
-				}
-
-				if (die)
-				{
-					Dispose();
-					return;
-				}
-
-				_authenticators = authenticators;
-				_mefContainer.ReleaseExports(allExports.Values.Except(used));
+                _authenticators = _mefContainer.GetExports<IAuthenticator>().ToArray();
+                if (!_authenticators.Any())
+                {
+                    throw new InvalidOperationException("No authenticators");
+                }
 			}
 			catch (CompositionException ce)
 			{
